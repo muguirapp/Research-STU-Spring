@@ -1,0 +1,81 @@
+---
+title: "Shiny App"
+output: html_notebook
+author: "Jose A. Muguira"
+---
+
+
+
+```{r}
+##Optimization model
+library(lpSolveAPI)
+
+##Function that returns a vector with the solutions
+optimizationPP <- function(n){
+
+model<- make.lp(2, 8)
+set.objfn(model, c(1, 1, 1, 1, 1, 1, 1, 1))
+
+##Different types of constraints
+add.constraint(model, c(1, 2.25, 3, 4.5, 5, 10, 20, 40), ">=", 2.25*n)
+
+##Boundaries of the number of times someone can recharge in the machine (randomly selected)
+set.bounds(model, lower = c(0, 0, 0, 0, 0, 0, 0, 0), upper=c(5, 5, 5, 5, 5, 5, 5, 5))
+set.type(model, columns = 1:8, type = "integer")
+
+solve(model)
+return(get.variables(model))
+}
+```
+
+We focus in the following model as explained by Tallys Yunes in <https://orbythebeach.wordpress.com/2018/03/01/buying-metrorail-tickets-in-miami/>
+
+
+$$
+\min  \, x_1 + x_2 + x_3 + x_4 + x_5 + x_6 + x_7 + x_8
+\\
+\text{subject to}
+\\
+x_1 + 2.25x_2 + 3x_3 + 4.5x_4 + 5x_5 + 10x_6 + 20x_7 + 40x_8 \geq 2.25n
+$$
+
+
+```{r}
+library(shiny)
+
+##Basic layout
+ui <- fluidPage(
+  h1("Metrorail Pass Calculator"),
+  
+  ##A slider that makes the user select the number of trips he/she wants to do
+  sidebarLayout(
+    
+    sidebarPanel(
+      helpText("How many trips are you expecting to have?"),
+      sliderInput(inputId = "slid", label =  "Select a value", min = 1, max = 100, value = 15)
+    ),
+    textOutput("text")
+  )
+)
+
+##Server composed of multiple if statements to not display unnecessary information
+##Could be improved later with a for loop
+server <- function(input, output){
+  output$text <- renderText({paste("You need to recharge: ",
+    if(optimizationPP(input$slid)[1] > 0)paste(optimizationPP(input$slid)[1], "  with $1. "),
+    if(optimizationPP(input$slid)[2] > 0)paste(optimizationPP(input$slid)[2], "  with $2.25. "),
+    if(optimizationPP(input$slid)[3] > 0)paste(optimizationPP(input$slid)[3], "  with $3. "),
+    if(optimizationPP(input$slid)[4] > 0)paste(optimizationPP(input$slid)[4], "  with $4.5. "),
+    if(optimizationPP(input$slid)[5] > 0)paste(optimizationPP(input$slid)[5], "  with $5. "),
+    if(optimizationPP(input$slid)[6] > 0)paste(optimizationPP(input$slid)[6], "  with $10. "),
+    if(optimizationPP(input$slid)[7] > 0)paste(optimizationPP(input$slid)[7], "  with $20. "),
+    if(optimizationPP(input$slid)[8] > 0)paste(optimizationPP(input$slid)[8], "  with $40. ")
+    )})
+  }
+shinyApp(ui = ui, server = server)
+```
+
+
+
+
+
